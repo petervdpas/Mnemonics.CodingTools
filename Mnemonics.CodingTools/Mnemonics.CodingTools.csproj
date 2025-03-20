@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <!-- NuGet Package Metadata -->
+        <PackageId>Mnemonics.CodingTools</PackageId>
+        <Version>1.0.2</Version>
+        <Authors>Peter van de Pas</Authors>
+        <Description>A set of tools to dynamically read and write classes</Description>
+        <PackageTags>Dynamic;Classes;Read;Write</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>assets/icon.png</PackageIcon>
+        <RepositoryUrl>https://github.com/petervdpas/Mnemonics.CodingTools</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+
+        <!-- Documentation and Source Link -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Deterministic>true</Deterministic>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <EnableSourceLink>true</EnableSourceLink>
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+
+        <!-- Build and Output -->
+        <PackageOutputPath>bin\$(Configuration)</PackageOutputPath>
+        <DebugType>embedded</DebugType>
+        <RestoreLockedMode>true</RestoreLockedMode>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="assets/icon.png" Pack="true" PackagePath="assets/"/>
+        <None Include="assets/LICENSE.txt" Pack="true" PackagePath="assets/"/>
+        <None Include="../README.md" Pack="true" PackagePath=""/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.CodeAnalysis" Version="4.13.0" />
+      <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3" />
+    </ItemGroup>
+
+</Project>
