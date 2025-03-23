@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.Logging;
+using Mnemonics.CodingTools.Interfaces;
 
 namespace Mnemonics.CodingTools.Logging;
 
@@ -7,24 +8,19 @@ namespace Mnemonics.CodingTools.Logging;
 ///     Provides a wrapper to adapt <see cref="Microsoft.Extensions.Logging.ILogger" />
 ///     to the <see cref="Mnemonics.CodingTools.Interfaces.INinjaLogger" /> interface.
 /// </summary>
-public class NinjaLogger
+public class NinjaLogger : INinjaLogger
 {
-    private readonly ILogger _logger;
+    private readonly ILogger<NinjaLogger> _logger;
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="NinjaLogger" /> class.
+    /// Initializes a new instance of the <see cref="NinjaLogger"/> class.
     /// </summary>
-    /// <param name="logger">
-    ///     The underlying <see cref="ILogger" /> instance used for logging.
-    /// </param>
-    /// <exception cref="ArgumentNullException">
-    ///     Thrown if the <paramref name="logger" /> is null.
-    /// </exception>
-    public NinjaLogger(ILogger logger)
+    /// <param name="logger">The underlying <see cref="ILogger"/> instance.</param>
+    public NinjaLogger(ILogger<NinjaLogger> logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
-
+    
     /// <summary>
     ///     Logs a debug message, optionally with structured arguments.
     /// </summary>

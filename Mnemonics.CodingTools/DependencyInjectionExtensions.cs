@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Mnemonics.CodingTools.Configuration;
 using Mnemonics.CodingTools.Interfaces;
 using Mnemonics.CodingTools.Logging;
@@ -36,7 +37,14 @@ public static class DependencyInjectionExtensions
 
         if (options.RegisterNinjaLogger)
         {
-            services.AddTransient<NinjaLogger>();
+            services.AddLogging();
+
+            services.AddTransient<INinjaLogger, NinjaLogger>(sp =>
+            {
+                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                var logger = loggerFactory.CreateLogger<NinjaLogger>();
+                return new NinjaLogger(logger);
+            });
         }
 
         return services;
