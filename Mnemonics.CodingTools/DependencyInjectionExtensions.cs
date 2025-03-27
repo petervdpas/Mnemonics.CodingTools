@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Mnemonics.CodingTools.Configuration;
+using Mnemonics.CodingTools.Data;
 using Mnemonics.CodingTools.Interfaces;
 using Mnemonics.CodingTools.Logging;
 
@@ -47,6 +48,21 @@ public static class DependencyInjectionExtensions
             });
         }
 
+        if (options.RegisterDynamicEFCore)
+        {
+            services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
+
+            if (options.ConfigureDynamicDb != null)
+            {
+                services.AddDbContext<DynamicDbContext>(options.ConfigureDynamicDb);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    "RegisterDynamicEFCore is enabled, but ConfigureDynamicDb is not provided.");
+            }
+        }
+        
         return services;
     }
 }

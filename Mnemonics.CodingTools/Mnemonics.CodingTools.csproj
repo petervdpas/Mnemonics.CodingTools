@@ -7,7 +7,7 @@
 
         <!-- NuGet Package Metadata -->
         <PackageId>Mnemonics.CodingTools</PackageId>
-        <Version>1.0.6</Version>
+        <Version>1.0.8</Version>
         <Authors>Peter van de Pas</Authors>
         <Description>A set of tools to dynamically read and write classes</Description>
         <PackageTags>Dynamic;Classes;Read;Write</PackageTags>
@@ -34,13 +34,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="assets/icon.png" Pack="true" PackagePath="assets/"/>
-        <None Include="assets/LICENSE.txt" Pack="true" PackagePath="assets/"/>
-        <None Include="../README.md" Pack="true" PackagePath=""/>
+        <None Include="assets/icon.png" Pack="true" PackagePath="assets/" />
+        <None Include="assets/LICENSE.txt" Pack="true" PackagePath="assets/" />
+        <None Include="../README.md" Pack="true" PackagePath="" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.CodeAnalysis" Version="4.13.0" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.3" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3" />
     </ItemGroup>
 
