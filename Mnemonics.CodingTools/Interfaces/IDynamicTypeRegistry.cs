@@ -19,5 +19,11 @@ namespace Mnemonics.CodingTools.Interfaces
         /// </summary>
         /// <param name="type">The type to register.</param>
         void RegisterType(Type type);
+
+        /// <summary>
+        /// Unregisters a previously registered dynamic type from the registry.
+        /// </summary>
+        /// <param name="type">The type to unregister.</param>
+        void UnregisterType(Type type);
     }
 }

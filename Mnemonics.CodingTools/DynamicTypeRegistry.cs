@@ -19,5 +19,11 @@ namespace Mnemonics.CodingTools
         {
             _types.Add(type);
         }
+
+        /// <inheritdoc />
+        public void UnregisterType(Type type)
+        {
+            _types.Remove(type);
+        }
     }
 }
