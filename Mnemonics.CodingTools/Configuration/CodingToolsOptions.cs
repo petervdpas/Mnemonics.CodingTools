@@ -57,6 +57,17 @@ namespace Mnemonics.CodingTools.Configuration
         public bool RegisterDapperStore { get; set; } = false;
 
         /// <summary>
+        /// Optional output directory for generated assemblies (used by DynamicClassBuilder).
+        /// Defaults to "GeneratedAssemblies".
+        /// </summary>
+        public string AssemblyDirectory { get; set; } = "GeneratedAssemblies";
+
+        /// <summary>
+        /// Optional directory for file-based store. Defaults to "EntityStore".
+        /// </summary>
+        public string? FileStoreDirectory { get; set; }
+
+        /// <summary>
         /// Optional factory for resolving the EF Core context used by DbEntityStore.
         /// </summary>
         public Func<IServiceProvider, Interfaces.IDbEntityStoreContext>? DbContextResolver { get; set; }
@@ -65,11 +76,6 @@ namespace Mnemonics.CodingTools.Configuration
         /// Optional factory that resolves a <see cref="Func{IDbConnection}"/> used by DapperEntityStore.
         /// </summary>
         public Func<IServiceProvider, Func<IDbConnection>>? DapperConnectionFactory { get; set; }
-
-        /// <summary>
-        /// Optional directory for file-based store. Defaults to "EntityStore".
-        /// </summary>
-        public string? FileStoreDirectory { get; set; }
 
         /// <summary>
         /// Optional custom key selector mapping for specific types (used by FileEntityStore).

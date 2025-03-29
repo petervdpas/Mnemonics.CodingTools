@@ -6,7 +6,6 @@ using Mnemonics.CodingTools.Configuration;
 using Mnemonics.CodingTools.Data;
 using Mnemonics.CodingTools.Interfaces;
 using Mnemonics.CodingTools.Logging;
-using Mnemonics.CodingTools.Stores;
 
 namespace Mnemonics.CodingTools
 {
@@ -25,87 +24,67 @@ namespace Mnemonics.CodingTools
             this IServiceCollection services,
             Action<CodingToolsOptions>? configureOptions = null)
         {
-            // Bind and register options using IOptions pattern
-            if (configureOptions != null)
-            {
-                services.Configure(configureOptions);
-            }
-            else
-            {
-                services.Configure<CodingToolsOptions>(_ => { }); // Register default
-            }
+            services.Configure(configureOptions ?? (_ => { }));
 
-            // Defer resolution of options until runtime
-            services.AddSingleton(sp =>
+            services.PostConfigure<CodingToolsOptions>(opts =>
             {
-                return sp.GetRequiredService<IOptions<CodingToolsOptions>>().Value;
+                if (opts.RegisterDynamicClassGenerator)
+                {
+                    services.AddTransient<IDynamicClassGenerator, DynamicClassGenerator>();
+                }
+
+                if (opts.RegisterDynamicClassBuilder)
+                {
+                    services.Configure(configureOptions ?? (_ => { })); // Ensure IOptions is available
+                    services.AddTransient<Func<string, IDynamicClassBuilder>>(sp => className =>
+                    {
+                        var opts = sp.GetRequiredService<IOptions<CodingToolsOptions>>();
+                        return new DynamicClassBuilder(className, opts);
+                    });
+                }
+
+                if (opts.RegisterNinjaLogger)
+                {
+                    services.AddLogging();
+
+                    services.AddTransient<INinjaLogger, NinjaLogger>(sp =>
+                    {
+                        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                        var logger = loggerFactory.CreateLogger<NinjaLogger>();
+                        return new NinjaLogger(logger);
+                    });
+                }
+
+                if (opts.RegisterDynamicEFCore)
+                {
+                    services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
+
+                    if (opts.ConfigureDynamicDb != null)
+                    {
+                        services.AddDbContext<DynamicDbContext>(opts.ConfigureDynamicDb);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            "RegisterDynamicEFCore is enabled, but ConfigureDynamicDb is not provided.");
+                    }
+                }
+
+                // Storage registration (delegated)
+                if (opts.RegisterInMemoryStore) { services.AddInMemoryStore(); }
+
+                if (opts.RegisterFileStore) { services.AddFileStore(); }
+
+                if (opts.RegisterDbStore) { services.AddDbStore(opts); }
+
+                if (opts.RegisterDapperStore) { services.AddDapperStore(opts); }
+
+                // Dynamic store resolver
+                if (opts.RegisterInMemoryStore || opts.RegisterFileStore || opts.RegisterDbStore || opts.RegisterDapperStore)
+                {
+                    services.AddSingleton<IDynamicEntityResolver, DynamicEntityResolver>();
+                }
             });
-
-            // These services can now depend on CodingToolsOptions via constructor
-
-            // Dynamic code generation
-            services.AddTransient<IDynamicClassGenerator, DynamicClassGenerator>();
-            services.AddTransient<IDynamicClassBuilder, DynamicClassBuilder>();
-
-            // Logging
-            services.AddLogging();
-            services.AddTransient<INinjaLogger, NinjaLogger>(sp =>
-            {
-                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-                var logger = loggerFactory.CreateLogger<NinjaLogger>();
-                return new NinjaLogger(logger);
-            });
-
-            // EF Core dynamic context
-            var provider = services.BuildServiceProvider(); // temporary, to access options
-            var opts = provider.GetRequiredService<IOptions<CodingToolsOptions>>().Value;
-
-            if (opts.RegisterDynamicEFCore)
-            {
-                services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
-
-                if (opts.ConfigureDynamicDb == null)
-                    throw new InvalidOperationException("ConfigureDynamicDb must be provided when RegisterDynamicEFCore is enabled.");
-
-                services.AddDbContext<DynamicDbContext>(opts.ConfigureDynamicDb);
-            }
-
-            // Storage registration
-            if (opts.RegisterInMemoryStore)
-            {
-                services.AddSingleton(typeof(IEntityStore<>), typeof(InMemoryEntityStoreFactory<>));
-            }
-
-            if (opts.RegisterFileStore)
-            {
-                services.AddSingleton(typeof(IEntityStore<>), typeof(FileEntityStoreFactory<>));
-            }
-
-            if (opts.RegisterDbStore)
-            {
-                if (opts.DbContextResolver == null)
-                    throw new InvalidOperationException("DbContextResolver must be provided when RegisterDbStore is enabled.");
-
-                services.AddScoped(typeof(IEntityStore<>), typeof(DbEntityStoreFactory<>));
-            }
-
-            if (opts.RegisterDapperStore)
-            {
-                if (opts.DapperConnectionFactory == null)
-                    throw new InvalidOperationException("DapperConnectionFactory must be provided when RegisterDapperStore is enabled.");
-
-                services.AddScoped(typeof(Func<System.Data.IDbConnection>), sp => opts.DapperConnectionFactory(sp));
-                services.AddScoped(typeof(IEntityStore<>), typeof(DapperEntityStoreFactory<>));
-            }
-
-            // Dynamic store resolver
-            if (opts.RegisterInMemoryStore ||
-                opts.RegisterFileStore ||
-                opts.RegisterDbStore ||
-                opts.RegisterDapperStore)
-            {
-                services.AddSingleton<IDynamicEntityResolver, DynamicEntityResolver>();
-            }
 
             return services;
         }
