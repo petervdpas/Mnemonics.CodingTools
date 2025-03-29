@@ -2,161 +2,210 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Mnemonics.CodingTools** is a .NET library that provides dynamic class generation and logging utilities for modern applications. With a focus on flexibility and ease of integration, this library allows you to build classes at runtime from JSON definitions and seamlessly integrate logging using Microsoft.Extensions.Logging.
+**Mnemonics.CodingTools** is a modular and extensible .NET library for dynamic class generation, runtime entity management, structured logging, and pluggable data storage — built with ASP.NET Core in mind.
 
-## Overview
+---
 
-The library offers the following features:
+## ✨ Features
 
-- **Dynamic Class Generation:**  
-  Generate classes dynamically from structured JSON input, compile them into assemblies, and retrieve defined namespaces.
+- **⚙️ Dynamic Class Generation**  
+  Generate types at runtime from JSON schemas or programmatic definitions. Compile into assemblies and use immediately.
 
-- **Dynamic Class Building:**  
-  (Optional) Build dynamic classes with customizable properties at runtime.
+- **📚 Runtime Entity Registration (EF Core)**  
+  Register types at runtime via `IDynamicTypeRegistry`. Automatically used by `DynamicDbContext`.
 
-- **Structured Logging:**  
-  Utilize the `NinjaLogger` adapter to integrate with the built-in logging framework in .NET.
+- **💾 Pluggable Entity Stores**  
+  Switch between multiple store implementations via `IEntityStore<T>` or `IAdvancedEntityStore<T>`:
+  - ✅ In-memory store
+  - ✅ File-based (JSON)
+  - ✅ EF Core-backed
+  - ✅ Dapper-based  
+  All support composite keys and batch operations (via `IAdvancedEntityStore<T>`).
 
-- **Dependency Injection Integration:**  
-  Easily register all services using the provided extension method with configurable options.
+- **🪵 Structured Logging**  
+  Use `NinjaLogger` as a drop-in structured logger based on `Microsoft.Extensions.Logging`.
 
-## Installation
+- **🔌 DI-Ready Architecture**  
+  Register everything with `AddCodingTools()`. Customize per backend using `CodingToolsOptions`.
 
-Install the package via the .NET CLI:
+---
+
+## 📦 Installation
 
 ```bash
-dotnet add package Mnemonics.CodingTools --version 1.0.0
+dotnet add package Mnemonics.CodingTools --version 1.0.x
 ```
 
-Or using the Package Manager Console:
+Or with the NuGet Package Manager:
 
 ```powershell
-Install-Package Mnemonics.CodingTools -Version 1.0.0
+Install-Package Mnemonics.CodingTools -Version 1.0.x
 ```
 
-## Getting Started
+---
 
-### Registering Services with Dependency Injection
+## 🚀 Quick Start
 
-The library includes a dependency injection extension method that allows you to register services selectively using options.
+### Register in `Program.cs` / `Startup.cs`
 
 ```csharp
-using Mnemonics.CodingTools;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Register all coding tools services using default options:
-builder.Services.AddCodingTools();
-
-// Or, customize the registration options:
 builder.Services.AddCodingTools(options =>
 {
     options.RegisterDynamicClassGenerator = true;
-    options.RegisterDynamicClassBuilder = true; // Enable if you have an implementation.
+    options.RegisterDynamicClassBuilder = true;
     options.RegisterNinjaLogger = true;
+
+    options.RegisterDynamicEFCore = true;
+    options.ConfigureDynamicDb = db => db.UseSqlite("Data Source=app.db");
+    options.DbContextResolver = sp => sp.GetRequiredService<DynamicDbContext>();
+
+    // Choose one or more entity stores:
+    options.RegisterDbStore = true;
+    // options.RegisterDapperStore = true;
+    // options.RegisterFileStore = true;
+    // options.RegisterInMemoryStore = true;
+
+    // (Optional) Custom file store behavior:
+    options.FileStoreDirectory = "Data";
+    // options.CustomKeySelectors[typeof(MyType)] = (MyType x) => new[] { x.Id.ToString() };
+    // options.JsonOptionsPerEntity[typeof(MyType)] = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 });
-
-var app = builder.Build();
-
-app.MapGet("/", (IDynamicClassGenerator generator) =>
-{
-    // Use the dynamic class generator here.
-    return "Coding Tools are set up!";
-});
-
-app.Run();
 ```
 
-### Dynamic Class Generation
+---
 
-The core functionality of dynamic class generation is exposed via the `IDynamicClassGenerator` interface. Here's an example of how to use it:
+## 🧱 Dynamic Class Generation
 
 ```csharp
-using Mnemonics.CodingTools.Interfaces;
-
-public class ExampleService
+public class MyService
 {
-    private readonly IDynamicClassGenerator _classGenerator;
+    private readonly IDynamicClassGenerator _generator;
 
-    public ExampleService(IDynamicClassGenerator classGenerator)
+    public MyService(IDynamicClassGenerator generator)
     {
-        _classGenerator = classGenerator;
+        _generator = generator;
     }
 
-    public void GenerateAssembly(string jsonDefinition, string outputDllPath)
+    public void Generate(string json)
     {
-        var (assemblyPath, namespaces) = _classGenerator.GenerateAssemblyFromJson(jsonDefinition, outputDllPath);
-
-        if (assemblyPath != null)
-        {
-            // Assembly generated successfully.
-        }
-        else
-        {
-            // Handle errors in generation.
-        }
+        var (dllPath, namespaces) = _generator.GenerateAssemblyFromJson(json, "MyAssembly.dll");
     }
 }
 ```
 
-### Logging with NinjaLogger
+---
 
-For logging, the library provides a `NinjaLogger` that wraps Microsoft.Extensions.Logging. This enables structured logging in your application.
+## 🧠 Runtime EF Entity Registration
 
 ```csharp
-using Mnemonics.CodingTools.Logging;
+public class StartupAction
+{
+    private readonly IDynamicTypeRegistry _registry;
 
-public class LoggingExample
+    public StartupAction(IDynamicTypeRegistry registry)
+    {
+        _registry = registry;
+    }
+
+    public void RegisterDynamicType(Type type)
+    {
+        _registry.RegisterType(type);
+    }
+}
+```
+
+---
+
+## 💾 Generic Entity Store Example
+
+```csharp
+public class EntityService<T> where T : class
+{
+    private readonly IAdvancedEntityStore<T> _store;
+
+    public EntityService(IAdvancedEntityStore<T> store)
+    {
+        _store = store;
+    }
+
+    public Task SaveAsync(T entity, params string[] keys)
+        => _store.SaveAsync(keys, entity);
+
+    public Task<IEnumerable<T>> AllAsync()
+        => _store.ListAsync();
+}
+```
+
+---
+
+## 📁 File Store Example
+
+```csharp
+builder.Services.AddCodingTools(options =>
+{
+    options.RegisterFileStore = true;
+    options.FileStoreDirectory = "EntityStore";
+    options.CustomKeySelectors[typeof(MyEntity)] = (MyEntity e) => new[] { e.Id };
+});
+```
+
+---
+
+## 🪵 Structured Logging with `NinjaLogger`
+
+```csharp
+public class LogService
 {
     private readonly NinjaLogger _logger;
 
-    public LoggingExample(NinjaLogger logger)
+    public LogService(NinjaLogger logger)
     {
         _logger = logger;
     }
 
-    public void LogExample()
+    public void LogStuff()
     {
-        _logger.Debug("This is a debug message");
-        _logger.Information("Information message with parameter: {0}", 123);
+        _logger.Information("This ran at {time}", DateTime.UtcNow);
     }
 }
 ```
 
-### JSON Structure for Dynamic Classes
+---
 
-The JSON input should define namespaces, classes, properties, and methods. An example JSON definition is as follows:
+## 🧾 JSON Schema Example
 
 ```json
 [
   {
-    "Namespace": "DynamicNamespace",
-    "Usings": [ "System" ],
+    "Namespace": "Dynamic.Models",
     "Classes": [
       {
-        "Name": "DynamicClass",
-        "Implements": [],
+        "Name": "User",
         "Properties": [
-          { "Name": "Property1", "Type": "string", "AccessorVisibility": "public", "AccessorType": "init" }
-        ],
-        "Constructors": [],
-        "Methods": []
+          { "Name": "Id", "Type": "string" },
+          { "Name": "Username", "Type": "string" }
+        ]
       }
     ]
   }
 ]
 ```
 
-This JSON is parsed by the library to dynamically generate classes and compile them into an assembly.
+---
 
-## Contributing
+## 🧪 Designed for Testing
 
-Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request with your changes. For any issues or feature requests, please open an issue in the [GitHub repository](https://github.com/petervdpas/Mnemonics.CodingTools).
+Interfaces like `IDynamicClassGenerator`, `INinjaLogger`, and `IAdvancedEntityStore<T>` allow for seamless mocking and testing in unit test environments.
 
-## License
+---
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+## 🤝 Contributing
 
-## Repository
+Feedback, PRs, and issues are welcome. Fork the repo or file issues at  
+[https://github.com/petervdpas/Mnemonics.CodingTools](https://github.com/petervdpas/Mnemonics.CodingTools)
 
-For more information, please visit the [GitHub repository](https://github.com/petervdpas/Mnemonics.CodingTools).
+---
+
+## 📜 License
+
+Licensed under the [MIT License](LICENSE).
