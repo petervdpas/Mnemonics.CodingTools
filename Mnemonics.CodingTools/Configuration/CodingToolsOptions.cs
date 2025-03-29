@@ -39,7 +39,7 @@ namespace Mnemonics.CodingTools.Configuration
         /// <summary>
         /// Indicates whether to register the in-memory entity store.
         /// </summary>
-        public bool RegisterInMemoryStore { get; set; } = true;
+        public bool RegisterInMemoryStore { get; set; } = false;
 
         /// <summary>
         /// Indicates whether to register the file-based entity store.
