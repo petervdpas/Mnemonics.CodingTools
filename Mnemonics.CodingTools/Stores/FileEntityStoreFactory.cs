@@ -16,7 +16,7 @@ namespace Mnemonics.CodingTools.Stores
     /// to the inner <see cref="FileEntityStore{T}"/>.
     /// </summary>
     /// <typeparam name="T">The entity type to store. Must be serializable to JSON.</typeparam>
-    public class FileEntityStoreFactory<T> : IAdvancedEntityStore<T> where T : class
+    public class FileEntityStoreFactory<T> : IEntityStore<T> where T : class
     {
         private readonly FileEntityStore<T> _inner;
 

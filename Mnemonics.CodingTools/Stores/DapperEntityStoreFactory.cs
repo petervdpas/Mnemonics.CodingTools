@@ -8,10 +8,10 @@ namespace Mnemonics.CodingTools.Stores
 {
     /// <summary>
     /// Factory wrapper for <see cref="DapperEntityStore{T}"/> that supports dependency injection.
-    /// Delegates all <see cref="IAdvancedEntityStore{T}"/> operations to the internal store instance.
+    /// Delegates all <see cref="IEntityStore{T}"/> operations to the internal store instance.
     /// </summary>
     /// <typeparam name="T">The entity type to store.</typeparam>
-    public class DapperEntityStoreFactory<T> : IAdvancedEntityStore<T> where T : class
+    public class DapperEntityStoreFactory<T> : IEntityStore<T> where T : class
     {
         private readonly DapperEntityStore<T> _inner;
 

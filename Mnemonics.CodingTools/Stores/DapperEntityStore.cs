@@ -11,11 +11,11 @@ using Mnemonics.CodingTools.Utilities;
 namespace Mnemonics.CodingTools.Storage
 {
     /// <summary>
-    /// Provides a Dapper-based implementation of <see cref="IAdvancedEntityStore{T}"/>.
+    /// Provides a Dapper-based implementation of <see cref="IEntityStore{T}"/>.
     /// Supports auto-creating tables with inferred schema and composite keys.
     /// </summary>
     /// <typeparam name="T">The entity type to store. Must have one or more public key properties (e.g., "Id", "SomethingId").</typeparam>
-    public class DapperEntityStore<T> : IAdvancedEntityStore<T> where T : class
+    public class DapperEntityStore<T> : IEntityStore<T> where T : class
     {
         private readonly Func<IDbConnection> _connectionFactory;
         private readonly string _tableName;

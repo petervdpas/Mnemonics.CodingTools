@@ -49,50 +49,51 @@ namespace Mnemonics.CodingTools
                 });
             }
 
+             // EF Core dynamic support
             if (options.RegisterDynamicEFCore)
             {
                 services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
 
-                if (options.ConfigureDynamicDb != null)
-                {
-                    services.AddDbContext<DynamicDbContext>(options.ConfigureDynamicDb);
-                }
-                else
-                {
+                if (options.ConfigureDynamicDb == null)
                     throw new InvalidOperationException(
                         "RegisterDynamicEFCore is enabled, but ConfigureDynamicDb is not provided.");
-                }
+
+                services.AddDbContext<DynamicDbContext>(options.ConfigureDynamicDb);
             }
 
+            // Register entity stores
             if (options.RegisterInMemoryStore)
-            {
-                services.AddSingleton(typeof(IEntityStore<>), typeof(InMemoryEntityStore<>));
-            }
+                services.AddSingleton(typeof(IEntityStore<>), typeof(InMemoryEntityStoreFactory<>));
 
             if (options.RegisterFileStore)
-            {
-                // Register the CodingToolsOptions instance so it can be injected
-                services.AddSingleton(options);
-
-                // Register the open generic FileEntityStoreFactory<T> for IAdvancedEntityStore<T>
-                services.AddSingleton(typeof(IAdvancedEntityStore<>), typeof(FileEntityStoreFactory<>));
-            }
+                services.AddSingleton(typeof(IEntityStore<>), typeof(FileEntityStoreFactory<>));
 
             if (options.RegisterDbStore)
             {
                 if (options.DbContextResolver == null)
-                    throw new InvalidOperationException("DbContextResolver must be provided when RegisterDbStore is enabled.");
+                    throw new InvalidOperationException(
+                        "DbContextResolver must be provided when RegisterDbStore is enabled.");
 
-                services.AddScoped(typeof(IAdvancedEntityStore<>), typeof(DbEntityStoreFactory<>));
+                services.AddScoped(typeof(IEntityStore<>), typeof(DbEntityStoreFactory<>));
             }
 
             if (options.RegisterDapperStore)
             {
                 if (options.DapperConnectionFactory == null)
-                    throw new InvalidOperationException("DapperConnectionFactory must be provided when RegisterDapperStore is enabled.");
+                    throw new InvalidOperationException(
+                        "DapperConnectionFactory must be provided when RegisterDapperStore is enabled.");
 
                 services.AddScoped(typeof(Func<System.Data.IDbConnection>), sp => options.DapperConnectionFactory(sp));
-                services.AddScoped(typeof(IAdvancedEntityStore<>), typeof(DapperEntityStoreFactory<>));
+                services.AddScoped(typeof(IEntityStore<>), typeof(DapperEntityStoreFactory<>));
+            }
+
+            // Register the dynamic entity resolver only if any store is enabled
+            if (options.RegisterInMemoryStore ||
+                options.RegisterFileStore ||
+                options.RegisterDbStore ||
+                options.RegisterDapperStore)
+            {
+                services.AddSingleton<IDynamicEntityResolver, DynamicEntityResolver>();
             }
 
             return services;

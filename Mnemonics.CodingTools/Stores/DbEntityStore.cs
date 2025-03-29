@@ -8,10 +8,10 @@ using Mnemonics.CodingTools.Interfaces;
 namespace Mnemonics.CodingTools.Storage
 {
     /// <summary>
-    /// Provides a database-backed implementation of <see cref="IAdvancedEntityStore{T}"/> using Entity Framework Core.
+    /// Provides a database-backed implementation of <see cref="IEntityStore{T}"/> using Entity Framework Core.
     /// </summary>
     /// <typeparam name="T">The entity type to store.</typeparam>
-    public class DbEntityStore<T> : IAdvancedEntityStore<T> where T : class
+    public class DbEntityStore<T> : IEntityStore<T> where T : class
     {
         private readonly IDbEntityStoreContext _context;
 

@@ -10,12 +10,12 @@ using Mnemonics.CodingTools.Interfaces;
 namespace Mnemonics.CodingTools.Stores
 {
     /// <summary>
-    /// Provides a file-based implementation of <see cref="IAdvancedEntityStore{T}"/> using JSON serialization.
+    /// Provides a file-based implementation of <see cref="IEntityStore{T}"/> using JSON serialization.
     /// Each entity is stored in an individual file, identified by a single or composite key.
     /// Thread-safe using a SemaphoreSlim to prevent concurrent file access.
     /// </summary>
     /// <typeparam name="T">The entity type to store. Must be serializable to JSON.</typeparam>
-    public class FileEntityStore<T> : IAdvancedEntityStore<T> where T : class
+    public class FileEntityStore<T> : IEntityStore<T> where T : class
     {
         private readonly string _directoryPath;
         private readonly JsonSerializerOptions _jsonOptions;
