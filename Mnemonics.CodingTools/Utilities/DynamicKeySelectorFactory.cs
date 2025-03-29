@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using Mnemonics.CodingTools.Models;
 
 namespace Mnemonics.CodingTools.Utilities
 {
@@ -17,19 +18,19 @@ namespace Mnemonics.CodingTools.Utilities
         public static Func<T, string[]> CreateSelector<T>() where T : class
         {
             var type = typeof(T);
-            var properties = type
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => string.Equals(p.Name, "Id", StringComparison.OrdinalIgnoreCase) ||
-                            p.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+
+            // Look for properties with [FieldWithAttributes(IsDisplayField = true)]
+            var keyProps = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.GetCustomAttribute<FieldWithAttributes>()?.IsDisplayField == true)
                 .ToArray();
 
-            if (properties.Length == 0)
-                throw new InvalidOperationException($"No key properties found on type '{type.Name}'.");
+            if (keyProps.Length == 0)
+                throw new InvalidOperationException($"No key properties found on type '{type.Name}'. Use IsDisplayField=true in your schema.");
 
             return entity =>
             {
                 if (entity == null) throw new ArgumentNullException(nameof(entity));
-                return properties.Select(p => p.GetValue(entity)?.ToString() ?? "").ToArray();
+                return keyProps.Select(p => p.GetValue(entity)?.ToString() ?? "").ToArray();
             };
         }
 
