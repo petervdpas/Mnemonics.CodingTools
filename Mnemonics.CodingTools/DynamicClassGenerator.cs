@@ -96,6 +96,13 @@ public class DynamicClassGenerator : IDynamicClassGenerator
             .Select(a => MetadataReference.CreateFromFile(a.Location))
             .ToList();
 
+        var fieldAttrAssembly = typeof(FieldWithAttributes).Assembly;
+        var fieldAttrReference = MetadataReference.CreateFromFile(fieldAttrAssembly.Location);
+        if (!references.Any(r => r.Display == fieldAttrAssembly.Location))
+        {
+            references.Add(fieldAttrReference);
+        }
+
         // Add the Microsoft.CSharp assembly
         references.Add(MetadataReference.CreateFromFile(
             typeof(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo).Assembly.Location));

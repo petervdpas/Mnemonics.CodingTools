@@ -75,13 +75,14 @@ public class DynamicClassBuilder : IDynamicClassBuilder
                 typeof(bool),
                 typeof(string), 
                 typeof(string), 
+                typeof(bool),
                 typeof(bool), 
                 typeof(string)
             ]) ?? throw new InvalidOperationException("Constructor not found for FieldWithAttributes.");
 
             var optionsJson = JsonSerializer.Serialize(property.Options ?? Array.Empty<string>());
-            var controlParamsJson = JsonSerializer.Serialize(property.ControlParameters ?? new Dictionary<string, object>());
-            var dataSetControlsJson = JsonSerializer.Serialize(property.DataSetControls ?? new Dictionary<string, object>());
+            var controlParamsJson = JsonSerializer.Serialize(property.ControlParameters ?? []);
+            var dataSetControlsJson = JsonSerializer.Serialize(property.DataSetControls ?? []);
 
             var attributeBuilder = new CustomAttributeBuilder(attributeConstructor,
             [
@@ -90,6 +91,7 @@ public class DynamicClassBuilder : IDynamicClassBuilder
                 property.IsRequired,
                 optionsJson,
                 controlParamsJson,
+                property.IsKeyField,
                 property.IsDisplayField,
                 dataSetControlsJson
             ]);

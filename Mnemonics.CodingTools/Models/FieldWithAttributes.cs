@@ -27,6 +27,7 @@ public class FieldWithAttributes : Attribute
     ///     These parameters are deserialized into a <see cref="Dictionary{TKey,TValue}" /> of string-object pairs,
     ///     allowing flexibility for control-specific settings such as maximum length, formatting, or validation rules.
     /// </param>
+    /// <param name="isKeyField">Indicates if the field is a logical key (used for lookup, storage, etc.).</param>
     /// <param name="isDisplayField">Indicates if the field is a display-field (for listing).</param>
     /// <param name="dataSetControlsJson">
     ///     A JSON-formatted string representing dataset-level configurations such as grouping or aggregation settings.
@@ -39,20 +40,20 @@ public class FieldWithAttributes : Attribute
         bool isRequired = false,
         string optionsJson = "[]",
         string controlParametersJson = "{}",
+        bool isKeyField = false,
         bool isDisplayField = false,
         string dataSetControlsJson = "{}")
     {
         ControlType = controlType;
         Placeholder = placeholder;
         IsRequired = isRequired;
+        IsKeyField = isKeyField;
         IsDisplayField = isDisplayField;
 
         // Deserialize the JSON strings back into the respective types
-        Options = JsonSerializer.Deserialize<IEnumerable<string>>(optionsJson) ?? Array.Empty<string>();
-        ControlParameters = JsonSerializer.Deserialize<Dictionary<string, object>>(controlParametersJson) ??
-                            new Dictionary<string, object>();
-        DataSetControls = JsonSerializer.Deserialize<Dictionary<string, object>>(dataSetControlsJson) ??
-                          new Dictionary<string, object>();
+        Options = JsonSerializer.Deserialize<IEnumerable<string>>(optionsJson) ?? [];
+        ControlParameters = JsonSerializer.Deserialize<Dictionary<string, object>>(controlParametersJson) ?? [];
+        DataSetControls = JsonSerializer.Deserialize<Dictionary<string, object>>(dataSetControlsJson) ?? [];
     }
 
     /// <summary>
@@ -83,6 +84,16 @@ public class FieldWithAttributes : Attribute
     ///     may include settings like "MaxLength" for a TextBox or "Min" and "Max" values for a NumericUpDown control.
     /// </remarks>
     public Dictionary<string, object> ControlParameters { get; }
+
+    /// <summary>
+    ///     Indicates if the field represents a unique key for the entity.
+    /// </summary>
+    /// <remarks>
+    ///     Fields marked as key fields are used in entity storage and retrieval operations,
+    ///     such as identifying objects in a file-based or database-backed store.
+    ///     This is distinct from <see cref="IsDisplayField"/>, which is intended for UI purposes only.
+    /// </remarks>
+    public bool IsKeyField { get; }
 
     /// <summary>
     ///     Specifies if the field is part of the DisplayName (for listing purposes).

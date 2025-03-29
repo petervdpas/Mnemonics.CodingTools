@@ -21,7 +21,7 @@ namespace Mnemonics.CodingTools.Utilities
 
             // Look for properties with [FieldWithAttributes(IsDisplayField = true)]
             var keyProps = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.GetCustomAttribute<FieldWithAttributes>()?.IsDisplayField == true)
+                .Where(p => p.GetCustomAttribute<FieldWithAttributes>()?.IsKeyField == true)
                 .ToArray();
 
             if (keyProps.Length == 0)
@@ -30,7 +30,7 @@ namespace Mnemonics.CodingTools.Utilities
             return entity =>
             {
                 if (entity == null) throw new ArgumentNullException(nameof(entity));
-                return keyProps.Select(p => p.GetValue(entity)?.ToString() ?? "").ToArray();
+                return [.. keyProps.Select(p => p.GetValue(entity)?.ToString() ?? "")];
             };
         }
 

@@ -79,6 +79,15 @@ public class DynamicPropertyMetadata
     public Dictionary<string, object>? ControlParameters { get; init; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether this property is used as part of the entity's key.
+    /// </summary>
+    /// <remarks>
+    ///     Key fields uniquely identify an entity and are used for operations like Save, Load, or Delete.
+    ///     This is especially important when using file-based or dynamic stores that require key resolution.
+    /// </remarks>
+    public bool IsKeyField { get; init; }
+
+    /// <summary>
     ///     Gets or sets a value indicating whether this property should be included as a display field.
     /// </summary>
     /// <remarks>
