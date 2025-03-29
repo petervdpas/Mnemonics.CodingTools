@@ -24,67 +24,70 @@ namespace Mnemonics.CodingTools
             this IServiceCollection services,
             Action<CodingToolsOptions>? configureOptions = null)
         {
+            var immediateOptions = new CodingToolsOptions();
+            configureOptions?.Invoke(immediateOptions);
             services.Configure(configureOptions ?? (_ => { }));
 
-            services.PostConfigure<CodingToolsOptions>(opts =>
+            // Register services based on evaluated options
+            if (immediateOptions.RegisterDynamicClassGenerator)
             {
-                if (opts.RegisterDynamicClassGenerator)
+                services.AddTransient<IDynamicClassGenerator, DynamicClassGenerator>();
+            }
+
+            if (immediateOptions.RegisterDynamicClassBuilder)
+            {
+                services.AddTransient<Func<string, IDynamicClassBuilder>>(sp => className =>
                 {
-                    services.AddTransient<IDynamicClassGenerator, DynamicClassGenerator>();
+                    var opts = sp.GetRequiredService<IOptions<CodingToolsOptions>>();
+                    return new DynamicClassBuilder(className, opts);
+                });
+            }
+
+            if (immediateOptions.RegisterNinjaLogger)
+            {
+                services.AddLogging();
+                services.AddTransient<INinjaLogger, NinjaLogger>(sp =>
+                {
+                    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+                    var logger = loggerFactory.CreateLogger<NinjaLogger>();
+                    return new NinjaLogger(logger);
+                });
+            }
+
+            if (immediateOptions.RegisterDynamicEFCore)
+            {
+                services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
+
+                if (immediateOptions.ConfigureDynamicDb == null)
+                {
+                    throw new InvalidOperationException(
+                        "RegisterDynamicEFCore is enabled, but ConfigureDynamicDb is not provided.");
                 }
 
-                if (opts.RegisterDynamicClassBuilder)
-                {
-                    services.Configure(configureOptions ?? (_ => { })); // Ensure IOptions is available
-                    services.AddTransient<Func<string, IDynamicClassBuilder>>(sp => className =>
-                    {
-                        var opts = sp.GetRequiredService<IOptions<CodingToolsOptions>>();
-                        return new DynamicClassBuilder(className, opts);
-                    });
-                }
+                services.AddDbContext<DynamicDbContext>(immediateOptions.ConfigureDynamicDb);
+            }
 
-                if (opts.RegisterNinjaLogger)
-                {
-                    services.AddLogging();
+            // Register entity store implementations
+            if (immediateOptions.RegisterInMemoryStore)
+                services.AddInMemoryStore();
 
-                    services.AddTransient<INinjaLogger, NinjaLogger>(sp =>
-                    {
-                        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-                        var logger = loggerFactory.CreateLogger<NinjaLogger>();
-                        return new NinjaLogger(logger);
-                    });
-                }
+            if (immediateOptions.RegisterFileStore)
+                services.AddFileStore();
 
-                if (opts.RegisterDynamicEFCore)
-                {
-                    services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
+            if (immediateOptions.RegisterDbStore)
+                services.AddDbStore(immediateOptions);
 
-                    if (opts.ConfigureDynamicDb != null)
-                    {
-                        services.AddDbContext<DynamicDbContext>(opts.ConfigureDynamicDb);
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException(
-                            "RegisterDynamicEFCore is enabled, but ConfigureDynamicDb is not provided.");
-                    }
-                }
+            if (immediateOptions.RegisterDapperStore)
+                services.AddDapperStore(immediateOptions);
 
-                // Storage registration (delegated)
-                if (opts.RegisterInMemoryStore) { services.AddInMemoryStore(); }
-
-                if (opts.RegisterFileStore) { services.AddFileStore(); }
-
-                if (opts.RegisterDbStore) { services.AddDbStore(opts); }
-
-                if (opts.RegisterDapperStore) { services.AddDapperStore(opts); }
-
-                // Dynamic store resolver
-                if (opts.RegisterInMemoryStore || opts.RegisterFileStore || opts.RegisterDbStore || opts.RegisterDapperStore)
-                {
-                    services.AddSingleton<IDynamicEntityResolver, DynamicEntityResolver>();
-                }
-            });
+            // Register dynamic resolver if any store was enabled
+            if (immediateOptions.RegisterInMemoryStore ||
+                immediateOptions.RegisterFileStore ||
+                immediateOptions.RegisterDbStore ||
+                immediateOptions.RegisterDapperStore)
+            {
+                services.AddSingleton<IDynamicEntityResolver, DynamicEntityResolver>();
+            }
 
             return services;
         }
