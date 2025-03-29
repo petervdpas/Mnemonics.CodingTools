@@ -89,6 +89,8 @@ namespace Mnemonics.CodingTools
                 services.AddSingleton<IDynamicEntityResolver, DynamicEntityResolver>();
             }
 
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<CodingToolsOptions>>().Value);
+
             return services;
         }
     }
