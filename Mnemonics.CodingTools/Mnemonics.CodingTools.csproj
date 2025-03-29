@@ -7,7 +7,7 @@
 
         <!-- NuGet Package Metadata -->
         <PackageId>Mnemonics.CodingTools</PackageId>
-        <Version>1.0.10</Version>
+        <Version>1.0.12</Version>
         <Authors>Peter van de Pas</Authors>
         <Description>A set of tools to dynamically read and write classes</Description>
         <PackageTags>Dynamic;Classes;Read;Write</PackageTags>
@@ -40,6 +40,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Dapper" Version="2.1.66" />
       <PackageReference Include="Microsoft.CodeAnalysis" Version="4.13.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.3" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3" />
