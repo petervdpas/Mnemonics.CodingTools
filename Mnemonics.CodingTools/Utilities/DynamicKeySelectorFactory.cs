@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using Mnemonics.CodingTools.Annotations;
 using Mnemonics.CodingTools.Models;
 
 namespace Mnemonics.CodingTools.Utilities
@@ -19,17 +20,17 @@ namespace Mnemonics.CodingTools.Utilities
         {
             var type = typeof(T);
 
-            // Look for properties with [FieldWithAttributes(IsKeyField = true)]
             var keyProps = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.GetCustomAttribute<FieldWithAttributes>()?.IsKeyField == true)
+                .Where(p => p.IsDefined(typeof(IsKeyFieldAttribute), inherit: false))
                 .ToArray();
 
             if (keyProps.Length == 0)
-                throw new InvalidOperationException($"No key properties found on type '{type.Name}'. Use IsKeyField=true in your schema.");
+                throw new InvalidOperationException(
+                    $"No key properties found on type '{type.Name}'. Did you forget to annotate with [IsKeyField]?");
 
             return entity =>
             {
-                if (entity == null) throw new ArgumentNullException(nameof(entity));
+                ArgumentNullException.ThrowIfNull(entity);
                 return [.. keyProps.Select(p => p.GetValue(entity)?.ToString() ?? "")];
             };
         }

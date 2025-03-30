@@ -1,4 +1,6 @@
-﻿namespace Mnemonics.CodingTools.Models;
+﻿using System.Collections.Generic;
+
+namespace Mnemonics.CodingTools.Models;
 
 /// <summary>
 ///     Represents the definition of a property, including its name, type, accessors, and visibility.
@@ -27,4 +29,9 @@ public class PropertyDefinition
     ///     Gets or sets the visibility of the property accessor (e.g., <c>public</c>, <c>private</c>, etc.).
     /// </summary>
     public string AccessorVisibility { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     A list of attribute indicators (e.g., "IsKeyField", "IsRequired").
+    /// </summary>
+    public List<string> Attributes { get; set; } = [];
 }

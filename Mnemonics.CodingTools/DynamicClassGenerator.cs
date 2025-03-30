@@ -96,13 +96,6 @@ public class DynamicClassGenerator : IDynamicClassGenerator
             .Select(a => MetadataReference.CreateFromFile(a.Location))
             .ToList();
 
-        var fieldAttrAssembly = typeof(FieldWithAttributes).Assembly;
-        var fieldAttrReference = MetadataReference.CreateFromFile(fieldAttrAssembly.Location);
-        if (!references.Any(r => r.Display == fieldAttrAssembly.Location))
-        {
-            references.Add(fieldAttrReference);
-        }
-
         // Add the Microsoft.CSharp assembly
         references.Add(MetadataReference.CreateFromFile(
             typeof(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo).Assembly.Location));
@@ -169,8 +162,7 @@ public class DynamicClassGenerator : IDynamicClassGenerator
 
             foreach (var property in classDef.Properties)
             {
-                var meta = classDef.Metadata.FirstOrDefault(m => m.Name == property.Name);
-                codeBuilder.AppendLine(GenerateProperty(property, meta));
+                codeBuilder.AppendLine(GenerateProperty(property));
             }
 
             foreach (var constructor in classDef.Constructors)
@@ -191,11 +183,6 @@ public class DynamicClassGenerator : IDynamicClassGenerator
     /// <param name="property">
     ///     The structural definition of the property, including its name, type, accessor visibility, and accessor type.
     /// </param>
-    /// <param name="meta">
-    ///     Optional metadata used to annotate the property with the <see cref="FieldWithAttributes"/> attribute.
-    ///     This may include control type, placeholder, validation rules, key/display flags, and serialized UI settings.
-    ///     If <c>null</c>, the property will be generated without metadata annotations.
-    /// </param>
     /// <returns>
     ///     A string containing the complete C# source code for the property, including optional attribute annotations.
     /// </returns>
@@ -204,7 +191,7 @@ public class DynamicClassGenerator : IDynamicClassGenerator
     ///     it emits a <see cref="FieldWithAttributes"/> attribute above the property declaration. This allows the generated
     ///     class to carry descriptive metadata used by UI builders or dynamic storage systems.
     /// </remarks>
-    private static string GenerateProperty(PropertyDefinition property, DynamicPropertyMetadata? meta)
+    private static string GenerateProperty(PropertyDefinition property)
     {
         var accessorVisibility = string.IsNullOrEmpty(property.AccessorVisibility)
             ? string.Empty
@@ -212,21 +199,9 @@ public class DynamicClassGenerator : IDynamicClassGenerator
 
         var attributeBuilder = new StringBuilder();
 
-        if (meta != null)
+        foreach (var attr in property.Attributes)
         {
-            string optionsJson = JsonSerializer.Serialize(meta.Options ?? []);
-            string controlParamsJson = JsonSerializer.Serialize(meta.ControlParameters ?? []);
-            string dataSetControlsJson = JsonSerializer.Serialize(meta.DataSetControls ?? []);
-
-            attributeBuilder.AppendLine($"        [FieldWithAttributes(" +
-                $"\"{meta.ControlType}\", " +
-                $"\"{meta.Placeholder}\", " +
-                $"{meta.IsRequired.ToString().ToLowerInvariant()}, " +
-                $"@\"{optionsJson}\", " +
-                $"@\"{controlParamsJson}\", " +
-                $"{meta.IsKeyField.ToString().ToLowerInvariant()}, " +
-                $"{meta.IsDisplayField.ToString().ToLowerInvariant()}, " +
-                $"@\"{dataSetControlsJson}\")]");
+            attributeBuilder.AppendLine($"        [{attr}]");
         }
 
         return attributeBuilder +
