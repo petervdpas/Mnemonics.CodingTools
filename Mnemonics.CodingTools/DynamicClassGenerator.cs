@@ -70,7 +70,11 @@ public class DynamicClassGenerator : IDynamicClassGenerator
         var codeBuilder = new StringBuilder();
 
         // Collect unique usings across all definitions
-        var uniqueUsings = new HashSet<string>(rootDefinitions.SelectMany(rd => rd.Usings));
+        var uniqueUsings = new HashSet<string>(rootDefinitions.SelectMany(rd => rd.Usings))
+        {
+            // Add default usings and attribute namespace
+            "Mnemonics.CodingTools.Annotations"
+        };
 
         // Place all using directives at the top
         codeBuilder.AppendLine(string.Join(Environment.NewLine, uniqueUsings.Select(u => $"using {u};")));
@@ -95,6 +99,13 @@ public class DynamicClassGenerator : IDynamicClassGenerator
             .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
             .Select(a => MetadataReference.CreateFromFile(a.Location))
             .ToList();
+
+        var annotationsAssembly = typeof(Annotations.IsKeyFieldAttribute).Assembly;
+        var annotationsReference = MetadataReference.CreateFromFile(annotationsAssembly.Location);
+        if (!references.Any(r => r.Display == annotationsAssembly.Location))
+        {
+            references.Add(annotationsReference);
+        }
 
         // Add the Microsoft.CSharp assembly
         references.Add(MetadataReference.CreateFromFile(
