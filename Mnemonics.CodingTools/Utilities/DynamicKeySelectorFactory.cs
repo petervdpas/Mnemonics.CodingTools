@@ -19,13 +19,13 @@ namespace Mnemonics.CodingTools.Utilities
         {
             var type = typeof(T);
 
-            // Look for properties with [FieldWithAttributes(IsDisplayField = true)]
+            // Look for properties with [FieldWithAttributes(IsKeyField = true)]
             var keyProps = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.GetCustomAttribute<FieldWithAttributes>()?.IsKeyField == true)
                 .ToArray();
 
             if (keyProps.Length == 0)
-                throw new InvalidOperationException($"No key properties found on type '{type.Name}'. Use IsDisplayField=true in your schema.");
+                throw new InvalidOperationException($"No key properties found on type '{type.Name}'. Use IsKeyField=true in your schema.");
 
             return entity =>
             {

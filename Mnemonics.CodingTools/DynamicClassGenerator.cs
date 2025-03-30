@@ -167,7 +167,11 @@ public class DynamicClassGenerator : IDynamicClassGenerator
             codeBuilder.AppendLine($"    public class {classDef.Name}{interfaces}");
             codeBuilder.AppendLine("    {");
 
-            foreach (var property in classDef.Properties) codeBuilder.AppendLine(GenerateProperty(property));
+            foreach (var property in classDef.Properties)
+            {
+                var meta = classDef.Metadata.FirstOrDefault(m => m.Name == property.Name);
+                codeBuilder.AppendLine(GenerateProperty(property, meta));
+            }
 
             foreach (var constructor in classDef.Constructors)
                 codeBuilder.AppendLine(GenerateConstructor(classDef, constructor));
@@ -182,21 +186,51 @@ public class DynamicClassGenerator : IDynamicClassGenerator
     }
 
     /// <summary>
-    ///     Generates the C# code for a property definition.
+    ///     Generates the C# source code for a property definition, optionally including metadata attributes.
     /// </summary>
-    /// <param name="property">The property definition, including its name, type, accessor visibility, and accessor type.</param>
-    /// <returns>A string containing the C# code for the property.</returns>
+    /// <param name="property">
+    ///     The structural definition of the property, including its name, type, accessor visibility, and accessor type.
+    /// </param>
+    /// <param name="meta">
+    ///     Optional metadata used to annotate the property with the <see cref="FieldWithAttributes"/> attribute.
+    ///     This may include control type, placeholder, validation rules, key/display flags, and serialized UI settings.
+    ///     If <c>null</c>, the property will be generated without metadata annotations.
+    /// </param>
+    /// <returns>
+    ///     A string containing the complete C# source code for the property, including optional attribute annotations.
+    /// </returns>
     /// <remarks>
-    ///     This method constructs a C# property definition using the provided details, such as its type, name,
-    ///     and accessor visibility (e.g., public/private) and accessor type (e.g., set/init).
+    ///     This method combines structural property definition with optional UI and behavior metadata. If metadata is provided,
+    ///     it emits a <see cref="FieldWithAttributes"/> attribute above the property declaration. This allows the generated
+    ///     class to carry descriptive metadata used by UI builders or dynamic storage systems.
     /// </remarks>
-    private static string GenerateProperty(PropertyDefinition property)
+    private static string GenerateProperty(PropertyDefinition property, DynamicPropertyMetadata? meta)
     {
         var accessorVisibility = string.IsNullOrEmpty(property.AccessorVisibility)
             ? string.Empty
             : property.AccessorVisibility + " ";
-        return
-            $"        public {property.Type} {property.Name} {{ get; {accessorVisibility}{property.AccessorType}; }}";
+
+        var attributeBuilder = new StringBuilder();
+
+        if (meta != null)
+        {
+            string optionsJson = JsonSerializer.Serialize(meta.Options ?? []);
+            string controlParamsJson = JsonSerializer.Serialize(meta.ControlParameters ?? []);
+            string dataSetControlsJson = JsonSerializer.Serialize(meta.DataSetControls ?? []);
+
+            attributeBuilder.AppendLine($"        [FieldWithAttributes(" +
+                $"\"{meta.ControlType}\", " +
+                $"\"{meta.Placeholder}\", " +
+                $"{meta.IsRequired.ToString().ToLowerInvariant()}, " +
+                $"@\"{optionsJson}\", " +
+                $"@\"{controlParamsJson}\", " +
+                $"{meta.IsKeyField.ToString().ToLowerInvariant()}, " +
+                $"{meta.IsDisplayField.ToString().ToLowerInvariant()}, " +
+                $"@\"{dataSetControlsJson}\")]");
+        }
+
+        return attributeBuilder +
+               $"        public {property.Type} {property.Name} {{ get; {accessorVisibility}{property.AccessorType}; }}";
     }
 
     /// <summary>

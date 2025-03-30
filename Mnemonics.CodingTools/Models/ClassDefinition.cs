@@ -23,6 +23,11 @@ public class ClassDefinition
     public List<PropertyDefinition> Properties { get; set; } = [];
 
     /// <summary>
+    /// Optional extended metadata for UI, validation, and storage semantics.
+    /// </summary>
+    public List<DynamicPropertyMetadata> Metadata { get; set; } = [];
+
+    /// <summary>
     ///     Gets or sets the list of constructors defined in the class,
     ///     each represented with its parameters and body lines.
     /// </summary>
