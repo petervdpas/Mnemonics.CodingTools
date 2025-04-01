@@ -58,8 +58,8 @@ namespace Mnemonics.CodingTools
             if (options.DapperConnectionFactory == null)
                 throw new InvalidOperationException("DapperConnectionFactory must be provided for DapperStore.");
 
-            services.AddScoped(typeof(Func<System.Data.IDbConnection>), sp => options.DapperConnectionFactory(sp));
-            return services.AddScoped(typeof(IEntityStore<>), typeof(DapperEntityStoreFactory<>));
+            services.AddSingleton(typeof(Func<System.Data.IDbConnection>), sp => options.DapperConnectionFactory(sp));
+            return services.AddSingleton(typeof(IEntityStore<>), typeof(DapperEntityStoreFactory<>));
         }
     }
 }
