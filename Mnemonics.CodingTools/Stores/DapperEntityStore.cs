@@ -14,26 +14,31 @@ namespace Mnemonics.CodingTools.Storage
     /// Provides a Dapper-based implementation of <see cref="IEntityStore{T}"/>.
     /// Supports auto-creating tables with inferred schema and composite keys.
     /// </summary>
-    /// <typeparam name="T">The entity type to store. Must have one or more public key properties (e.g., "Id", "SomethingId").</typeparam>
+    /// <typeparam name="T">The entity type to store. Must have key properties (either with [IsKeyField] or matching fallback names).</typeparam>
     public class DapperEntityStore<T> : IEntityStore<T> where T : class
     {
         private readonly Func<IDbConnection> _connectionFactory;
         private readonly string _tableName;
+        private readonly SqlBuilder<T> _sqlBuilder;
         private readonly PropertyInfo[] _keyProperties;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DapperEntityStore{T}"/> class.
         /// </summary>
-        /// <param name="connectionFactory">Factory that provides a new database connection.</param>
-        /// <param name="tableName">Optional custom table name; defaults to the type name of <typeparamref name="T"/>.</param>
-        public DapperEntityStore(Func<IDbConnection> connectionFactory, string? tableName = null)
+        /// <param name="connectionFactory">Factory for creating database connections.</param>
+        /// <param name="tableName">Optional override for table name. Defaults to type name.</param>
+        /// <param name="fallbackKeyNames">Optional fallback key names used for key property detection.</param>
+        public DapperEntityStore(
+            Func<IDbConnection> connectionFactory,
+            string? tableName = null,
+            List<string>? fallbackKeyNames = null)
         {
             _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
             _tableName = tableName ?? typeof(T).Name;
-            _keyProperties = SqlTypeUtilities.GetKeyProperties(typeof(T)).ToArray();
 
-            if (_keyProperties.Length == 0)
-                throw new InvalidOperationException($"Entity type {typeof(T).Name} must have one or more 'Id' or '*Id' properties.");
+            var keyNames = fallbackKeyNames ?? SqlTypeUtilities.DefaultFallbackNames;
+            _sqlBuilder = new SqlBuilder<T>(keyNames);
+            _keyProperties = SqlTypeUtilities.GetKeyProperties(typeof(T), keyNames).ToArray();
 
             EnsureTableExists();
         }
@@ -55,7 +60,7 @@ namespace Mnemonics.CodingTools.Storage
         {
             var idProp = _keyProperties.FirstOrDefault(p => string.Equals(p.Name, "Id", StringComparison.OrdinalIgnoreCase));
             if (idProp == null)
-                throw new NotSupportedException($"LoadAsync(string id) requires a property named 'Id'.");
+                throw new NotSupportedException("LoadAsync(string id) requires a key named 'Id'.");
 
             using var connection = _connectionFactory();
             var sql = $"SELECT * FROM \"{_tableName}\" WHERE \"{idProp.Name}\" = @Id LIMIT 1;";
@@ -67,7 +72,7 @@ namespace Mnemonics.CodingTools.Storage
         {
             ValidateKeyCount(keys);
             var param = MapKeysToParameters(keys);
-            var sql = SqlBuilder<T>.BuildSelectSql(_tableName);
+            var sql = _sqlBuilder.BuildSelectSql(_tableName);
 
             using var connection = _connectionFactory();
             return await connection.QueryFirstOrDefaultAsync<T>(sql, param);
@@ -78,7 +83,7 @@ namespace Mnemonics.CodingTools.Storage
         {
             var idProp = _keyProperties.FirstOrDefault(p => string.Equals(p.Name, "Id", StringComparison.OrdinalIgnoreCase));
             if (idProp == null)
-                throw new NotSupportedException($"DeleteAsync(string id) requires a property named 'Id'.");
+                throw new NotSupportedException("DeleteAsync(string id) requires a key named 'Id'.");
 
             using var connection = _connectionFactory();
             var sql = $"DELETE FROM \"{_tableName}\" WHERE \"{idProp.Name}\" = @Id;";
@@ -91,7 +96,7 @@ namespace Mnemonics.CodingTools.Storage
         {
             ValidateKeyCount(keys);
             var param = MapKeysToParameters(keys);
-            var sql = SqlBuilder<T>.BuildDeleteSql(_tableName);
+            var sql = _sqlBuilder.BuildDeleteSql(_tableName);
 
             using var connection = _connectionFactory();
             var rows = await connection.ExecuteAsync(sql, param);
@@ -109,18 +114,18 @@ namespace Mnemonics.CodingTools.Storage
         public async Task InsertAsync(IEnumerable<T> items)
         {
             if (items == null) throw new ArgumentNullException(nameof(items));
-            var insertSql = SqlBuilder<T>.BuildInsertSql(_tableName);
+            var sql = _sqlBuilder.BuildInsertSql(_tableName);
 
             using var connection = _connectionFactory();
             foreach (var item in items)
-                await connection.ExecuteAsync(insertSql, item);
+                await connection.ExecuteAsync(sql, item);
         }
 
         private async Task SaveInternalAsync(T entity)
         {
             using var connection = _connectionFactory();
-            await connection.ExecuteAsync(SqlBuilder<T>.BuildDeleteSql(_tableName), entity);
-            await connection.ExecuteAsync(SqlBuilder<T>.BuildInsertSql(_tableName), entity);
+            await connection.ExecuteAsync(_sqlBuilder.BuildDeleteSql(_tableName), entity);
+            await connection.ExecuteAsync(_sqlBuilder.BuildInsertSql(_tableName), entity);
         }
 
         private DynamicParameters MapKeysToParameters(object[] keys)
@@ -128,7 +133,6 @@ namespace Mnemonics.CodingTools.Storage
             var param = new DynamicParameters();
             for (int i = 0; i < keys.Length; i++)
                 param.Add(_keyProperties[i].Name, keys[i]);
-
             return param;
         }
 
@@ -141,7 +145,7 @@ namespace Mnemonics.CodingTools.Storage
         private void EnsureTableExists()
         {
             using var connection = _connectionFactory();
-            connection.Execute(SqlBuilder<T>.BuildCreateTableSql(_tableName));
+            connection.Execute(_sqlBuilder.BuildCreateTableSql(_tableName));
         }
     }
 }

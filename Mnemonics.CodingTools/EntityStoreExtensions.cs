@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Mnemonics.CodingTools.Configuration;
 using Mnemonics.CodingTools.Interfaces;
+using Mnemonics.CodingTools.Storage;
 using Mnemonics.CodingTools.Stores;
 
 namespace Mnemonics.CodingTools
@@ -59,7 +62,14 @@ namespace Mnemonics.CodingTools
                 throw new InvalidOperationException("DapperConnectionFactory must be provided for DapperStore.");
 
             services.AddSingleton(typeof(Func<System.Data.IDbConnection>), sp => options.DapperConnectionFactory(sp));
-            return services.AddSingleton(typeof(IEntityStore<>), typeof(DapperEntityStoreFactory<>));
+
+            return services.AddSingleton(typeof(IEntityStore<>), serviceType =>
+            {
+                var entityType = serviceType.GetType().GenericTypeArguments[0];
+                var connectionFactory = services.BuildServiceProvider().GetRequiredService<Func<IDbConnection>>();
+                var storeType = typeof(DapperEntityStore<>).MakeGenericType(entityType);
+                return Activator.CreateInstance(storeType, connectionFactory, null, options.GlobalFallbackKeyNames)!;
+            });
         }
     }
 }

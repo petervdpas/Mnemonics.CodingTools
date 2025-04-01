@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Mnemonics.CodingTools.Annotations;
-using Mnemonics.CodingTools.Models;
 
 namespace Mnemonics.CodingTools.Utilities
 {
@@ -16,22 +16,37 @@ namespace Mnemonics.CodingTools.Utilities
         /// </summary>
         /// <typeparam name="T">The entity type.</typeparam>
         /// <returns>A function that returns string[] of key values.</returns>
-        public static Func<T, string[]> CreateSelector<T>() where T : class
+        public static Func<T, string[]> CreateSelector<T>(List<string> fallbackKeyNames) where T : class
         {
             var type = typeof(T);
+            var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
-            var keyProps = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.IsDefined(typeof(IsKeyFieldAttribute), inherit: false))
+            // First: use attribute
+            var annotated = props.Where(p => Attribute.IsDefined(p, typeof(IsKeyFieldAttribute))).ToArray();
+            if (annotated.Length > 0)
+            {
+                return entity =>
+                {
+                    ArgumentNullException.ThrowIfNull(entity);
+                    return annotated.Select(p => p.GetValue(entity)?.ToString() ?? "").ToArray();
+                };
+            }
+
+            // Fallback: name-based
+            var fallback = props.Where(p =>
+                fallbackKeyNames.Any(name =>
+                    string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase) ||
+                    p.Name.EndsWith(name, StringComparison.OrdinalIgnoreCase)))
                 .ToArray();
 
-            if (keyProps.Length == 0)
+            if (fallback.Length == 0)
                 throw new InvalidOperationException(
-                    $"No key properties found on type '{type.Name}'. Did you forget to annotate with [IsKeyField]?");
+                    $"No key properties found on type '{type.Name}'. Use [IsKeyField] or match fallback key names.");
 
             return entity =>
             {
                 ArgumentNullException.ThrowIfNull(entity);
-                return [.. keyProps.Select(p => p.GetValue(entity)?.ToString() ?? "")];
+                return fallback.Select(p => p.GetValue(entity)?.ToString() ?? "").ToArray();
             };
         }
 

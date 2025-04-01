@@ -37,6 +37,12 @@ namespace Mnemonics.CodingTools.Configuration
         public Action<DbContextOptionsBuilder>? ConfigureDynamicDb { get; set; }
 
         /// <summary>
+        /// Global fallback key property names to use when [IsKeyField] is not specified.
+        /// Applied to all dynamic types.
+        /// </summary>
+        public List<string> GlobalFallbackKeyNames { get; set; } = ["Id"];
+
+        /// <summary>
         /// Indicates whether to register the in-memory entity store.
         /// </summary>
         public bool RegisterInMemoryStore { get; set; } = false;

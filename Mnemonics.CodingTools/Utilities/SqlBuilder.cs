@@ -1,23 +1,37 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
 namespace Mnemonics.CodingTools.Utilities
 {
     /// <summary>
-    /// Provides utility methods for generating SQL statements for the entity type <typeparamref name="T"/>.
+    /// Generates SQL statements for a given entity type <typeparamref name="T"/> using reflection.
+    /// Supports custom fallback key names for determining primary keys.
     /// </summary>
-    /// <typeparam name="T">The entity type for which SQL statements are generated. Must be a class.</typeparam>
-    public static class SqlBuilder<T> where T : class
+    /// <typeparam name="T">The entity type for which SQL statements will be generated.</typeparam>
+    public class SqlBuilder<T> where T : class
     {
-        private static readonly PropertyInfo[] _properties = typeof(T).GetProperties();
-        private static readonly PropertyInfo[] _keyProperties = SqlTypeUtilities.GetKeyProperties(typeof(T)).ToArray();
+        private readonly PropertyInfo[] _properties;
+        private readonly PropertyInfo[] _keyProperties;
 
         /// <summary>
-        /// Builds an <c>INSERT</c> SQL statement for the entity type <typeparamref name="T"/>.
+        /// Initializes a new instance of the <see cref="SqlBuilder{T}"/> class using provided fallback key names.
         /// </summary>
-        /// <param name="tableName">The name of the table into which the entity will be inserted.</param>
-        /// <returns>A SQL string representing the insert command.</returns>
-        public static string BuildInsertSql(string tableName)
+        /// <param name="fallbackKeyNames">
+        /// A list of fallback key names (e.g., "Id", "Bk") used when [IsKeyField] attributes are not present.
+        /// </param>
+        public SqlBuilder(List<string>? fallbackKeyNames = null)
+        {
+            _properties = typeof(T).GetProperties();
+            _keyProperties = [.. SqlTypeUtilities.GetKeyProperties(typeof(T), fallbackKeyNames)];
+        }
+
+        /// <summary>
+        /// Builds an <c>INSERT</c> SQL statement for inserting the entity into the specified table.
+        /// </summary>
+        /// <param name="tableName">The name of the table to insert into.</param>
+        /// <returns>A SQL INSERT command string.</returns>
+        public string BuildInsertSql(string tableName)
         {
             var columns = string.Join(", ", _properties.Select(p => Quote(p.Name)));
             var values = string.Join(", ", _properties.Select(p => "@" + p.Name));
@@ -25,45 +39,42 @@ namespace Mnemonics.CodingTools.Utilities
         }
 
         /// <summary>
-        /// Builds a <c>DELETE</c> SQL statement for the entity type <typeparamref name="T"/>,
-        /// using the primary or composite key properties in the <c>WHERE</c> clause.
+        /// Builds a <c>DELETE</c> SQL statement for deleting an entity by its key(s).
         /// </summary>
-        /// <param name="tableName">The name of the table from which the entity will be deleted.</param>
-        /// <returns>A SQL string representing the delete command.</returns>
-        public static string BuildDeleteSql(string tableName)
+        /// <param name="tableName">The name of the table to delete from.</param>
+        /// <returns>A SQL DELETE command string.</returns>
+        public string BuildDeleteSql(string tableName)
         {
             var whereClause = BuildWhereClause();
             return $"DELETE FROM {Quote(tableName)} WHERE {whereClause};";
         }
 
         /// <summary>
-        /// Builds a <c>SELECT</c> SQL statement to fetch a single entity of type <typeparamref name="T"/>,
-        /// filtered by its primary or composite key.
+        /// Builds a <c>SELECT</c> SQL statement to load an entity by its key(s).
         /// </summary>
-        /// <param name="tableName">The name of the table from which the entity will be selected.</param>
-        /// <returns>A SQL string representing the select command.</returns>
-        public static string BuildSelectSql(string tableName)
+        /// <param name="tableName">The name of the table to select from.</param>
+        /// <returns>A SQL SELECT command string with WHERE clause and LIMIT 1.</returns>
+        public string BuildSelectSql(string tableName)
         {
             var whereClause = BuildWhereClause();
             return $"SELECT * FROM {Quote(tableName)} WHERE {whereClause} LIMIT 1;";
         }
 
         /// <summary>
-        /// Builds a <c>WHERE</c> clause for the entity type <typeparamref name="T"/> using its key properties.
+        /// Builds the WHERE clause used for SELECT/DELETE based on key properties.
         /// </summary>
-        /// <returns>A SQL <c>WHERE</c> clause matching all key fields.</returns>
-        public static string BuildWhereClause()
+        /// <returns>A SQL WHERE clause string using all key properties.</returns>
+        public string BuildWhereClause()
         {
             return string.Join(" AND ", _keyProperties.Select(p => $"{Quote(p.Name)} = @{p.Name}"));
         }
 
         /// <summary>
-        /// Builds a <c>CREATE TABLE</c> SQL statement for the entity type <typeparamref name="T"/>,
-        /// including column types and nullability, and defining the primary key.
+        /// Builds a <c>CREATE TABLE</c> SQL statement that defines the schema and primary key.
         /// </summary>
         /// <param name="tableName">The name of the table to create.</param>
-        /// <returns>A SQL string representing the table creation command.</returns>
-        public static string BuildCreateTableSql(string tableName)
+        /// <returns>A SQL CREATE TABLE command string.</returns>
+        public string BuildCreateTableSql(string tableName)
         {
             var columns = _properties.Select(p =>
             {
@@ -83,8 +94,10 @@ namespace Mnemonics.CodingTools.Utilities
         }
 
         /// <summary>
-        /// Quotes an identifier (e.g., column or table name) to prevent conflicts with SQL reserved words.
+        /// Quotes a SQL identifier to prevent conflicts with reserved keywords.
         /// </summary>
+        /// <param name="identifier">The name of the column or table.</param>
+        /// <returns>The quoted identifier (e.g., "Name").</returns>
         private static string Quote(string identifier) => $"\"{identifier}\"";
     }
 }

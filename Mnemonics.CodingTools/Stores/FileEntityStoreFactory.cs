@@ -34,7 +34,7 @@ namespace Mnemonics.CodingTools.Stores
 
             var keySelector = options.CustomKeySelectors.TryGetValue(typeof(T), out var customSelector)
                 ? (Func<T, string[]>)customSelector
-                : DynamicKeySelectorFactory.CreateSelector<T>();
+                : DynamicKeySelectorFactory.CreateSelector<T>(options.GlobalFallbackKeyNames);
 
             _inner = new FileEntityStore<T>(dir, keySelector, jsonOptions);
         }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Mnemonics.CodingTools.Annotations;
 
 namespace Mnemonics.CodingTools.Utilities
 {
@@ -12,27 +13,42 @@ namespace Mnemonics.CodingTools.Utilities
     public static class SqlTypeUtilities
     {
         /// <summary>
-        /// Maps a .NET type to an appropriate SQL type.
+        /// Gets or sets the global fallback property names to be used for key inference
+        /// when no explicit <see cref="IsKeyFieldAttribute"/> is present.
         /// </summary>
+        /// <remarks>
+        /// This list is checked in order, matching either exact names or name suffixes.
+        /// </remarks>
+        public static List<string> DefaultFallbackNames { get; set; } = ["Id"];
+
+        /// <summary>
+        /// Maps a .NET type to a corresponding SQL column type.
+        /// </summary>
+        /// <param name="type">The .NET type to convert.</param>
+        /// <returns>The SQL type as a string (e.g., TEXT, INTEGER, etc.).</returns>
+        /// <exception cref="NotSupportedException">Thrown if the type is not supported.</exception>
         public static string GetSqlType(Type type)
         {
             type = Nullable.GetUnderlyingType(type) ?? type;
 
             return type switch
             {
-                _ when type == typeof(string)   => "TEXT",
-                _ when type == typeof(int)      => "INTEGER",
-                _ when type == typeof(long)     => "BIGINT",
-                _ when type == typeof(bool)     => "BOOLEAN",
+                _ when type == typeof(string) => "TEXT",
+                _ when type == typeof(int) => "INTEGER",
+                _ when type == typeof(long) => "BIGINT",
+                _ when type == typeof(bool) => "BOOLEAN",
                 _ when type == typeof(DateTime) => "DATETIME",
-                _ when type == typeof(double)   => "REAL",
+                _ when type == typeof(double) => "REAL",
                 _ => throw new NotSupportedException($"Type '{type.Name}' is not supported in auto table creation.")
             };
         }
 
         /// <summary>
-        /// Determines whether a property is nullable (either a reference type or Nullable&lt;T&gt;).
+        /// Determines whether a given property is nullable.
+        /// This includes reference types and Nullable value types.
         /// </summary>
+        /// <param name="prop">The property to inspect.</param>
+        /// <returns><c>true</c> if the property is nullable; otherwise, <c>false</c>.</returns>
         public static bool IsNullable(PropertyInfo prop)
         {
             if (!prop.PropertyType.IsValueType) return true;
@@ -40,31 +56,43 @@ namespace Mnemonics.CodingTools.Utilities
         }
 
         /// <summary>
-        /// Returns properties considered keys: "Id", or those ending in "Id" (case-insensitive).
+        /// Identifies key properties for the specified type using either
+        /// the <see cref="IsKeyFieldAttribute"/> or fallback naming conventions.
         /// </summary>
-        public static IEnumerable<PropertyInfo> GetKeyProperties(Type type)
+        /// <param name="type">The type to inspect for key properties.</param>
+        /// <param name="fallbackNames">Optional fallback names to use instead of <see cref="DefaultFallbackNames"/>.</param>
+        /// <returns>A sequence of <see cref="PropertyInfo"/> representing key properties.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown if no valid key property is found via attributes or fallback logic.
+        /// </exception>
+        public static IEnumerable<PropertyInfo> GetKeyProperties(Type type, List<string>? fallbackNames = null)
         {
             var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var annotated = props.Where(p => Attribute.IsDefined(p, typeof(IsKeyFieldAttribute))).ToList();
+            if (annotated.Count > 0)
+                return annotated;
+
+            fallbackNames ??= DefaultFallbackNames;
 
             var keyCandidates = props.Where(p =>
-                string.Equals(p.Name, "Id", StringComparison.OrdinalIgnoreCase) ||
-                p.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase)).ToList();
+                fallbackNames.Any(name =>
+                    string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase) ||
+                    p.Name.EndsWith(name, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
 
             if (keyCandidates.Count == 0)
-            {
                 throw new InvalidOperationException(
-                    $"Type '{type.Name}' must have at least one 'Id' or '*Id' property for key inference.");
-            }
+                    $"Type '{type.Name}' must have at least one key property via [IsKeyField] or fallback names.");
 
             return keyCandidates;
         }
 
         /// <summary>
-        /// Builds a SQL PRIMARY KEY clause for one or more properties.
+        /// Builds a SQL <c>PRIMARY KEY</c> clause using the specified key properties.
         /// </summary>
-        /// <param name="keyProps">The key properties.</param>
-        /// <param name="quoteFunc">A function to quote each column name.</param>
-        /// <returns>The PRIMARY KEY clause for use in a CREATE TABLE statement.</returns>
+        /// <param name="keyProps">The key properties to include in the clause.</param>
+        /// <param name="quoteFunc">Optional function to quote column names (defaults to identity).</param>
+        /// <returns>A SQL <c>PRIMARY KEY</c> clause string.</returns>
         public static string BuildPrimaryKeyClause(IEnumerable<PropertyInfo> keyProps, Func<string, string>? quoteFunc = null)
         {
             quoteFunc ??= s => s; // no quoting if none provided
