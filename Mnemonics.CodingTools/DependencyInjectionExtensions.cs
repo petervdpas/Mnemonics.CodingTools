@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mnemonics.CodingTools.Configuration;
@@ -27,6 +28,9 @@ namespace Mnemonics.CodingTools
             var immediateOptions = new CodingToolsOptions();
             configureOptions?.Invoke(immediateOptions);
             services.Configure(configureOptions ?? (_ => { }));
+
+            // Register options value as singleton (if not already registered)
+            services.TryAddSingleton(sp => sp.GetRequiredService<IOptions<CodingToolsOptions>>().Value);
 
             // Register services based on evaluated options
             if (immediateOptions.RegisterDynamicClassGenerator)
@@ -56,14 +60,10 @@ namespace Mnemonics.CodingTools
 
             if (immediateOptions.RegisterDynamicEFCore)
             {
-                services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
-
                 if (immediateOptions.ConfigureDynamicDb == null)
-                {
-                    throw new InvalidOperationException(
-                        "RegisterDynamicEFCore is enabled, but ConfigureDynamicDb is not provided.");
-                }
+                    throw new InvalidOperationException("ConfigureDynamicDb must be set for EF Core support.");
 
+                services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
                 services.AddDbContext<DynamicDbContext>(immediateOptions.ConfigureDynamicDb);
             }
 

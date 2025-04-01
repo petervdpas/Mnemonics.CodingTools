@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Threading.Tasks;
+using Mnemonics.CodingTools.Configuration;
 using Mnemonics.CodingTools.Interfaces;
 using Mnemonics.CodingTools.Storage;
 
@@ -19,10 +21,11 @@ namespace Mnemonics.CodingTools.Stores
         /// Initializes a new instance of the <see cref="DapperEntityStoreFactory{T}"/> class.
         /// </summary>
         /// <param name="connectionFactory">A factory that provides an open <see cref="System.Data.IDbConnection"/>.</param>
-        public DapperEntityStoreFactory(Func<System.Data.IDbConnection> connectionFactory)
+        /// <param name="options">The <see cref="CodingToolsOptions"/> used to configure the store (directory, serialization, etc.).</param>
+        public DapperEntityStoreFactory(Func<IDbConnection> connectionFactory, CodingToolsOptions options)
         {
-            if (connectionFactory == null) throw new ArgumentNullException(nameof(connectionFactory));
-            _inner = new DapperEntityStore<T>(connectionFactory);
+            var fallbackKeys = options.GlobalFallbackKeyNames;
+            _inner = new DapperEntityStore<T>(connectionFactory, null, fallbackKeys);
         }
 
         /// <inheritdoc/>
