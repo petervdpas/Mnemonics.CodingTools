@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Mnemonics.CodingTools.Annotations;
 
 namespace Mnemonics.CodingTools.Utilities
 {
     /// <summary>
-    /// Provides a utility for generating a key selector function for use with file-based stores.
+    /// Provides a utility for generating a key selector function for use with file-based or Dapper stores.
     /// </summary>
     public static class DynamicKeySelectorFactory
     {
@@ -15,53 +14,43 @@ namespace Mnemonics.CodingTools.Utilities
         /// Creates a strongly-typed key selector for the specified entity type.
         /// </summary>
         /// <typeparam name="T">The entity type.</typeparam>
-        /// <returns>A function that returns string[] of key values.</returns>
+        /// <param name="fallbackKeyNames">A list of fallback key names (e.g. "Id").</param>
+        /// <returns>A function that returns string[] of key values from the entity.</returns>
         public static Func<T, string[]> CreateSelector<T>(List<string> fallbackKeyNames) where T : class
         {
+            if (fallbackKeyNames == null)
+                throw new ArgumentNullException(nameof(fallbackKeyNames));
+
             var type = typeof(T);
-            var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var keyProps = KeyDetectionUtility.GetKeyProperties(type, fallbackKeyNames);
 
-            // First: use attribute
-            var annotated = props.Where(p => Attribute.IsDefined(p, typeof(IsKeyFieldAttribute))).ToArray();
-            if (annotated.Length > 0)
-            {
-                return entity =>
-                {
-                    ArgumentNullException.ThrowIfNull(entity);
-                    return annotated.Select(p => p.GetValue(entity)?.ToString() ?? "").ToArray();
-                };
-            }
-
-            // Fallback: name-based
-            var fallback = props.Where(p =>
-                fallbackKeyNames.Any(name =>
-                    string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase) ||
-                    p.Name.EndsWith(name, StringComparison.OrdinalIgnoreCase)))
-                .ToArray();
-
-            if (fallback.Length == 0)
+            if (keyProps.Count == 0)
                 throw new InvalidOperationException(
-                    $"No key properties found on type '{type.Name}'. Use [IsKeyField] or match fallback key names.");
+                    $"No key properties found on type '{type.Name}'. " +
+                    "Use [IsKeyField] or match fallback key names.");
 
             return entity =>
             {
                 ArgumentNullException.ThrowIfNull(entity);
-                return fallback.Select(p => p.GetValue(entity)?.ToString() ?? "").ToArray();
+                return [.. keyProps.Select(p => p.GetValue(entity)?.ToString() ?? "")];
             };
         }
 
         /// <summary>
-        /// Creates a key selector dynamically using reflection and returns it boxed.
+        /// Creates a key selector dynamically using reflection and returns it as an object.
         /// </summary>
         /// <param name="entityType">The entity type.</param>
-        /// <returns>A compiled key selector delegate (as object).</returns>
+        /// <returns>A boxed delegate that returns key strings from an entity.</returns>
         public static object CreateSelector(Type entityType)
         {
+            if (entityType == null)
+                throw new ArgumentNullException(nameof(entityType));
+
             var method = typeof(DynamicKeySelectorFactory)
                 .GetMethod(nameof(CreateSelector), BindingFlags.Public | BindingFlags.Static)!
                 .MakeGenericMethod(entityType);
 
-            return method.Invoke(null, null)!;
+            return method.Invoke(null, [KeyDetectionUtility.GetKeyProperties(entityType, ["Id"])])!;
         }
     }
 }

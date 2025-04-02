@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Mnemonics.CodingTools.Configuration;
 using Mnemonics.CodingTools.Interfaces;
-using Mnemonics.CodingTools.Models;
+using Mnemonics.CodingTools.Utilities;
 
 namespace Mnemonics.CodingTools.Data
 {
@@ -53,23 +53,16 @@ namespace Mnemonics.CodingTools.Data
             foreach (var type in _typeRegistry.GetTypes())
             {
                 var entity = modelBuilder.Entity(type);
+                var keyProps = KeyDetectionUtility.GetKeyProperties(type, _options.GlobalFallbackKeyNames);
 
-                var keyProps = type.GetProperties()
-                    .Where(p => p.GetCustomAttributes(typeof(FieldWithAttributes), true)
-                                 .Cast<FieldWithAttributes>()
-                                 .Any(attr => attr.IsKeyField))
-                    .ToList();
-
-                if (!keyProps.Any())
+                if (keyProps.Any())
                 {
-                    var fallbackKey = _options.GlobalFallbackKeyNames
-                        .Select(type.GetProperty)
-                        .FirstOrDefault(p => p != null);
-
-                    if (fallbackKey != null)
-                    {
-                        entity.HasKey(fallbackKey.Name);
-                    }
+                    entity.HasKey(keyProps.Select(p => p.Name).ToArray());
+                }
+                else
+                {
+                    throw new InvalidOperationException($"No key found for type {type.FullName}. " +
+                        "Add [IsKeyField] or match fallback names.");
                 }
             }
 
