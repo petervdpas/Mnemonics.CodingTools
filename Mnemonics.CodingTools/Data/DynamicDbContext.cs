@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Mnemonics.CodingTools.Interfaces;
 
@@ -7,7 +9,7 @@ namespace Mnemonics.CodingTools.Data
     /// A custom <see cref="DbContext"/> that dynamically registers entity types at runtime
     /// based on types provided by an <see cref="IDynamicTypeRegistry"/>.
     /// </summary>
-    public class DynamicDbContext : DbContext
+    public class DynamicDbContext : DbContext, IDbEntityStoreContext
     {
         private readonly IDynamicTypeRegistry _typeRegistry;
 
@@ -21,6 +23,13 @@ namespace Mnemonics.CodingTools.Data
         {
             _typeRegistry = typeRegistry;
         }
+
+        /// <inheritdoc />
+        public new DbSet<T> Set<T>() where T : class => base.Set<T>();
+
+        /// <inheritdoc />
+        public new Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+            => base.SaveChangesAsync(cancellationToken);
 
         /// <summary>
         /// Configures the entity types in the model by registering all types from the <see cref="IDynamicTypeRegistry"/>.
