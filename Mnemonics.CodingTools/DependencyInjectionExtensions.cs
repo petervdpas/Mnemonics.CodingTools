@@ -65,6 +65,7 @@ namespace Mnemonics.CodingTools
 
                 services.AddSingleton<IDynamicTypeRegistry, DynamicTypeRegistry>();
                 services.AddDbContext<DynamicDbContext>(immediateOptions.ConfigureDynamicDb);
+                services.AddScoped<IDbEntityStoreContext>(sp => sp.GetRequiredService<DynamicDbContext>());
             }
 
             // Register entity store implementations
