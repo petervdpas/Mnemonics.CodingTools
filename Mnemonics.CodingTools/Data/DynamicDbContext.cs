@@ -41,6 +41,17 @@ namespace Mnemonics.CodingTools.Data
         public new DbSet<T> Set<T>() where T : class => base.Set<T>();
 
         /// <inheritdoc />
+        public object Set(Type type)
+        {
+            // EF Core supports this natively (returns a closed generic DbSet<T>)
+            var method = typeof(DbContext)
+                .GetMethod(nameof(Set), Array.Empty<Type>())!
+                .MakeGenericMethod(type);
+
+            return method.Invoke(this, null)!;
+        }
+
+        /// <inheritdoc />
         public new Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
             => base.SaveChangesAsync(cancellationToken);
 
@@ -53,6 +64,7 @@ namespace Mnemonics.CodingTools.Data
             foreach (var type in _typeRegistry.GetTypes())
             {
                 var entity = modelBuilder.Entity(type);
+
                 var keyProps = KeyDetectionUtility.GetKeyProperties(type, _options.GlobalFallbackKeyNames);
 
                 if (keyProps.Any())
