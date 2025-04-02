@@ -75,7 +75,11 @@ namespace Mnemonics.CodingTools
                 services.AddFileStore();
 
             if (immediateOptions.RegisterDbStore)
+            {
+                // 👇 Inject DynamicDbContext by default
+                immediateOptions.DbContextResolver ??= sp => sp.GetRequiredService<IDbEntityStoreContext>();
                 services.AddDbStore(immediateOptions);
+            }
 
             if (immediateOptions.RegisterDapperStore)
                 services.AddDapperStore(immediateOptions);

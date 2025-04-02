@@ -7,7 +7,7 @@
 
         <!-- NuGet Package Metadata -->
         <PackageId>Mnemonics.CodingTools</PackageId>
-        <Version>1.0.38</Version>
+        <Version>1.0.40</Version>
         <Authors>Peter van de Pas</Authors>
         <Description>A set of tools to dynamically read and write classes</Description>
         <PackageTags>Dynamic;Classes;Read;Write</PackageTags>
