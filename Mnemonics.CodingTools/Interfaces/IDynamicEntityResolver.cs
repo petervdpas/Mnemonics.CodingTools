@@ -8,10 +8,11 @@ namespace Mnemonics.CodingTools.Interfaces
     public interface IDynamicEntityResolver
     {
         /// <summary>
-        /// Resolves an IEntityStore for the specified entity type.
+        /// Resolves an <see cref="IEntityStore{T}"/> for the specified entity type using the provided service scope.
         /// </summary>
         /// <param name="entityType">The entity type to resolve.</param>
-        /// <returns>The IEntityStore instance.</returns>
-        object GetStore(Type entityType);
+        /// <param name="scope">A scoped service provider used to resolve the store instance.</param>
+        /// <returns>The resolved <see cref="IEntityStore{T}"/> instance.</returns>
+        object GetStore(Type entityType, IServiceProvider scope);
     }
 }

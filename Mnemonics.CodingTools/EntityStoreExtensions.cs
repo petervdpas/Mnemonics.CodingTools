@@ -45,7 +45,8 @@ namespace Mnemonics.CodingTools
             if (options.DbContextResolver == null)
                 throw new InvalidOperationException("DbContextResolver must be provided for DbStore.");
 
-            return services.AddScoped(typeof(IEntityStore<>), typeof(DbEntityStoreFactory<>));
+            services.AddScoped(typeof(IEntityStore<>), typeof(DbEntityStoreFactory<>));
+            return services;
         }
 
         /// <summary>
