@@ -28,7 +28,10 @@ namespace Mnemonics.CodingTools.Stores
         /// <param name="directoryPath">The directory where entity files will be stored.</param>
         /// <param name="keySelector">Function to extract the composite key from an entity.</param>
         /// <param name="jsonOptions">Optional JSON serializer options.</param>
-        public FileEntityStore(string directoryPath, Func<T, string[]> keySelector, JsonSerializerOptions? jsonOptions = null)
+        public FileEntityStore(
+            string directoryPath, 
+            Func<T, string[]> keySelector, 
+            JsonSerializerOptions? jsonOptions = null)
         {
             _directoryPath = directoryPath ?? throw new ArgumentNullException(nameof(directoryPath));
             _keySelector = keySelector ?? throw new ArgumentNullException(nameof(keySelector));

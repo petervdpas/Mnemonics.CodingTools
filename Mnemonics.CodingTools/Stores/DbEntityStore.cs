@@ -9,11 +9,13 @@ namespace Mnemonics.CodingTools.Storage
 {
     /// <summary>
     /// Provides a database-backed implementation of <see cref="IEntityStore{T}"/> using Entity Framework Core.
+    /// Supports dynamically loaded types at runtime.
     /// </summary>
     /// <typeparam name="T">The entity type to store.</typeparam>
     public class DbEntityStore<T> : IEntityStore<T> where T : class
     {
         private readonly IDbEntityStoreContext _context;
+        private readonly Type _entityType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DbEntityStore{T}"/> class.
@@ -22,6 +24,7 @@ namespace Mnemonics.CodingTools.Storage
         public DbEntityStore(IDbEntityStoreContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _entityType = typeof(T);
         }
 
         /// <inheritdoc/>
@@ -30,8 +33,9 @@ namespace Mnemonics.CodingTools.Storage
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentNullException(nameof(id));
             if (entity == null) throw new ArgumentNullException(nameof(entity));
 
-            var dbSet = _context.Set<T>();
-            var existing = await dbSet.FindAsync(id);
+            dynamic dbSet = _context.Set(_entityType);
+            var existing = await dbSet.FindAsync(new object[] { id });
+
             if (existing is not null)
                 dbSet.Remove(existing);
 
@@ -45,8 +49,9 @@ namespace Mnemonics.CodingTools.Storage
             if (keys is null || keys.Length == 0) throw new ArgumentException("Keys cannot be null or empty.", nameof(keys));
             if (entity == null) throw new ArgumentNullException(nameof(entity));
 
-            var dbSet = _context.Set<T>();
+            dynamic dbSet = _context.Set(_entityType);
             var existing = await dbSet.FindAsync(keys.Cast<object>().ToArray());
+
             if (existing is not null)
                 dbSet.Remove(existing);
 
@@ -58,7 +63,10 @@ namespace Mnemonics.CodingTools.Storage
         public async Task<T?> LoadAsync(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentNullException(nameof(id));
-            return await _context.Set<T>().FindAsync(id);
+
+            dynamic dbSet = _context.Set(_entityType);
+            var result = await dbSet.FindAsync(new object[] { id });
+            return (T?)result;
         }
 
         /// <inheritdoc/>
@@ -67,7 +75,9 @@ namespace Mnemonics.CodingTools.Storage
             if (keys is null || keys.Length == 0)
                 throw new ArgumentException("Keys cannot be null or empty.", nameof(keys));
 
-            return await _context.Set<T>().FindAsync(keys);
+            dynamic dbSet = _context.Set(_entityType);
+            var result = await dbSet.FindAsync(keys);
+            return (T?)result;
         }
 
         /// <inheritdoc/>
@@ -75,8 +85,9 @@ namespace Mnemonics.CodingTools.Storage
         {
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentNullException(nameof(id));
 
-            var dbSet = _context.Set<T>();
-            var entity = await dbSet.FindAsync(id);
+            dynamic dbSet = _context.Set(_entityType);
+            var entity = await dbSet.FindAsync(new object[] { id });
+
             if (entity is null) return false;
 
             dbSet.Remove(entity);
@@ -90,8 +101,9 @@ namespace Mnemonics.CodingTools.Storage
             if (keys is null || keys.Length == 0)
                 throw new ArgumentException("Keys cannot be null or empty.", nameof(keys));
 
-            var dbSet = _context.Set<T>();
+            dynamic dbSet = _context.Set(_entityType);
             var entity = await dbSet.FindAsync(keys);
+
             if (entity is null) return false;
 
             dbSet.Remove(entity);
@@ -102,7 +114,9 @@ namespace Mnemonics.CodingTools.Storage
         /// <inheritdoc/>
         public async Task<IEnumerable<T>> ListAsync()
         {
-            return await _context.Set<T>().ToListAsync();
+            dynamic dbSet = _context.Set(_entityType);
+            var list = await EntityFrameworkQueryableExtensions.ToListAsync(dbSet);
+            return ((IEnumerable<object>)list).Cast<T>();
         }
 
         /// <inheritdoc/>
@@ -110,8 +124,11 @@ namespace Mnemonics.CodingTools.Storage
         {
             if (items == null) throw new ArgumentNullException(nameof(items));
 
-            var dbSet = _context.Set<T>();
-            await dbSet.AddRangeAsync(items);
+            dynamic dbSet = _context.Set(_entityType);
+
+            foreach (var item in items)
+                dbSet.Add(item);
+
             await _context.SaveChangesAsync();
         }
     }

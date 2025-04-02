@@ -22,7 +22,9 @@ namespace Mnemonics.CodingTools.Stores
         /// </summary>
         /// <param name="connectionFactory">A factory that provides an open <see cref="System.Data.IDbConnection"/>.</param>
         /// <param name="options">The <see cref="CodingToolsOptions"/> used to configure the store (directory, serialization, etc.).</param>
-        public DapperEntityStoreFactory(Func<IDbConnection> connectionFactory, CodingToolsOptions options)
+        public DapperEntityStoreFactory(
+            Func<IDbConnection> connectionFactory, 
+            CodingToolsOptions options)
         {
             var fallbackKeys = options.GlobalFallbackKeyNames;
             _inner = new DapperEntityStore<T>(connectionFactory, null, fallbackKeys);

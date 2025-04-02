@@ -10,7 +10,7 @@ namespace Mnemonics.CodingTools.Stores
     /// Factory wrapper for <see cref="DbEntityStore{T}"/> that supports dependency injection.
     /// Delegates all <see cref="IEntityStore{T}"/> operations to the internal store instance.
     /// </summary>
-    /// <typeparam name="T">The entity type to store.</typeparam>
+    /// <typeparam name="T">The entity type to store. Can be statically known or dynamically compiled at runtime.</typeparam>
     public class DbEntityStoreFactory<T> : IEntityStore<T> where T : class
     {
         private readonly DbEntityStore<T> _inner;
@@ -18,11 +18,14 @@ namespace Mnemonics.CodingTools.Stores
         /// <summary>
         /// Initializes a new instance of the <see cref="DbEntityStoreFactory{T}"/> class.
         /// </summary>
-        /// <param name="context">The EF Core context implementing <see cref="IDbEntityStoreContext"/>.</param>
+        /// <param name="context">
+        /// The EF Core context implementing <see cref="IDbEntityStoreContext"/>, capable of resolving runtime types.
+        /// </param>
         public DbEntityStoreFactory(IDbEntityStoreContext context)
         {
-            if (context == null) throw new ArgumentNullException(nameof(context));
-            _inner = new DbEntityStore<T>(context);
+            _inner = context != null
+                ? new DbEntityStore<T>(context)
+                : throw new ArgumentNullException(nameof(context));
         }
 
         /// <inheritdoc/>
